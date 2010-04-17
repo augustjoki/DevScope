@@ -9,8 +9,8 @@
 #import "DevScopeAppDelegate.h"
 
 
-#import "RootViewController.h"
-#import "DetailViewController.h"
+#import "ScopeListViewController.h"
+#import "ScopeDetailViewController.h"
 
 
 @implementation DevScopeAppDelegate

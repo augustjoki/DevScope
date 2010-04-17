@@ -9,8 +9,8 @@
 #import <UIKit/UIKit.h>
 
 
-@class RootViewController;
-@class DetailViewController;
+@class ScopeListViewController;
+@class ScopeDetailViewController;
 
 @interface DevScopeAppDelegate : NSObject <UIApplicationDelegate> {
     
@@ -18,14 +18,14 @@
     
     UISplitViewController *splitViewController;
     
-    RootViewController *rootViewController;
-    DetailViewController *detailViewController;
+    ScopeListViewController *rootViewController;
+    ScopeDetailViewController *detailViewController;
 }
 
 @property (nonatomic, retain) IBOutlet UIWindow *window;
 
 @property (nonatomic, retain) IBOutlet UISplitViewController *splitViewController;
-@property (nonatomic, retain) IBOutlet RootViewController *rootViewController;
-@property (nonatomic, retain) IBOutlet DetailViewController *detailViewController;
+@property (nonatomic, retain) IBOutlet ScopeListViewController *rootViewController;
+@property (nonatomic, retain) IBOutlet ScopeDetailViewController *detailViewController;
 
 @end
