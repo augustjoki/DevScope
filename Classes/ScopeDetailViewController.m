@@ -12,6 +12,7 @@
 
 @property (nonatomic, retain) UIPopoverController *popoverController;
 @property (nonatomic, assign) BOOL isAspectFit, isActualSize;
+@property (nonatomic, assign) CAShapeLayer *editingShape;
 
 - (void)recenter;
 - (void)aspectFit;
@@ -19,10 +20,12 @@
 - (void)actualSize;
 - (void)actualSizeAnimated:(BOOL)animated;
 - (CGFloat)aspectFitScale;
-- (void)doubleTap:(UIGestureRecognizer *)recognizer;
-- (void)twoFingerTap:(UIGestureRecognizer *)recognizer;
+- (void)doubleTap:(UITapGestureRecognizer *)recognizer;
+- (void)twoFingerTap:(UITapGestureRecognizer *)recognizer;
 - (CGRect)zoomRectWithScale:(float)scale withCenter:(CGPoint)center;
-- (void)longPress:(UIGestureRecognizer *)recognizer;
+- (void)longPress:(UILongPressGestureRecognizer *)recognizer;
+- (void)pan:(UIPanGestureRecognizer *)recognizer;
+- (void)pinch:(UIPinchGestureRecognizer *)recognizer;
 
 @end
 
@@ -30,7 +33,8 @@
 
 @implementation ScopeDetailViewController
 
-@synthesize toolbar, popoverController, isAspectFit, isActualSize;
+@synthesize toolbar, popoverController;
+@synthesize isAspectFit, isActualSize, editingShape;
 
 
 
@@ -62,7 +66,12 @@
 #pragma mark Scroll View
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
-  return containerView;
+  if (editingShape == nil) {
+    return containerView;
+  }
+  else {
+    return nil;
+  }
 }
 
 
@@ -213,7 +222,7 @@
 #pragma mark -
 #pragma mark Gestures
 
-- (void)doubleTap:(UIGestureRecognizer *)recognizer {
+- (void)doubleTap:(UITapGestureRecognizer *)recognizer {
   if (scrollView.zoomScale == scrollView.maximumZoomScale) {
     return;
   }
@@ -223,7 +232,7 @@
 }
 
 
-- (void)twoFingerTap:(UIGestureRecognizer *)recognizer {
+- (void)twoFingerTap:(UITapGestureRecognizer *)recognizer {
   if (scrollView.zoomScale == scrollView.minimumZoomScale) {
     return;
   }
@@ -233,13 +242,13 @@
 }
 
 
-- (void)longPress:(UIGestureRecognizer *)recognizer {
+- (void)longPress:(UILongPressGestureRecognizer *)recognizer {
   if (recognizer.state == UIGestureRecognizerStateChanged ||
       recognizer.state == UIGestureRecognizerStateCancelled) {
     recognizingEdit = NO;
     if (editingShape != nil) {
       editingShape.lineDashPattern = nil;
-      editingShape = nil;
+      self.editingShape = nil;
     }
   }
   else if (recognizer.state == UIGestureRecognizerStateEnded) {
@@ -252,7 +261,7 @@
       for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
         CGRect rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
         if (CGRectContainsPoint(rect, point)) {
-          editingShape = [shapes objectAtIndex:ii];
+          self.editingShape = [shapes objectAtIndex:ii];
           break;
         }
       }
@@ -265,7 +274,7 @@
     }
     else {
       editingShape.lineDashPattern = nil;
-      editingShape = nil;
+      self.editingShape = nil;
     }
   }
   else if (recognizer.state == UIGestureRecognizerStateBegan) {
@@ -293,7 +302,6 @@
                                    [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear],
                                    [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn],
                                    nil];
-      transform.removedOnCompletion = NO;
       
       CAKeyframeAnimation *position = [CAKeyframeAnimation animationWithKeyPath:@"position"];
       CGRect transformRect;
@@ -315,7 +323,6 @@
       
       position.values = positions;
       position.timingFunctions = transform.timingFunctions;
-      position.removedOnCompletion = NO;
       
       CAAnimationGroup *group = [CAAnimationGroup animation];
       group.animations = [NSArray arrayWithObjects:transform, position, nil];
@@ -324,6 +331,62 @@
     }
   }
 }
+
+
+- (void)pan:(UIPanGestureRecognizer *)recognizer {
+  if (recognizer.state == UIGestureRecognizerStateBegan) {
+    gestureFrame = gestureView.frame;
+  }
+  CGPoint translation = [recognizer translationInView:containerView];
+  
+  CGRect frame = gestureFrame;
+  frame.origin.x = floorf(frame.origin.x + translation.x);
+  frame.origin.y = floorf(frame.origin.y + translation.y);
+  gestureView.frame = frame;
+  
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, frame);
+  editingShape.path = path;
+  CGPathRelease(path);
+  
+  if (recognizer.state == UIGestureRecognizerStateEnded) {
+    NSValue *value = [NSValue valueWithCGRect:frame];
+    [rects replaceObjectAtIndex:[shapes indexOfObject:editingShape] withObject:value];
+  }
+}
+
+
+- (void)pinch:(UIPinchGestureRecognizer *)recognizer {
+  if (recognizer.state == UIGestureRecognizerStateBegan) {
+    gestureFrame = gestureView.frame;
+  }
+  CGPoint location = [recognizer locationInView:containerView];
+  CGFloat scale = recognizer.scale;
+  NSLog(@"%f", scale);
+  
+  CGRect frame = gestureFrame;
+  CGFloat ratioX = (location.x - frame.origin.x) / frame.size.width;
+  CGFloat ratioY = (location.y - frame.origin.y) / frame.size.height;
+  
+  frame.size = CGSizeApplyAffineTransform(frame.size,
+                                          CGAffineTransformMakeScale(scale, scale));
+  
+  frame.origin.x = floorf(location.x - frame.size.width * ratioX);
+  frame.origin.y = floorf(location.y - frame.size.height * ratioY);
+  
+  gestureView.frame = frame;
+  
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, frame);
+  editingShape.path = path;
+  CGPathRelease(path);
+  
+  if (recognizer.state == UIGestureRecognizerStateEnded) {
+    NSValue *value = [NSValue valueWithCGRect:frame];
+    [rects replaceObjectAtIndex:[shapes indexOfObject:editingShape] withObject:value];
+  }
+}
+
 
 #pragma mark -
 #pragma mark Private
@@ -423,16 +486,21 @@
   if (self != nil) {
     [self addObserver:self forKeyPath:@"isAspectFit" options:0 context:NULL];
     [self addObserver:self forKeyPath:@"isActualSize" options:0 context:NULL];
+    [self addObserver:self forKeyPath:@"editingShape" options:0 context:NULL];
   }
   return self;
 }
 
 
 - (void)dealloc {
+  [self removeObserver:self forKeyPath:@"isAspectFit"];
+  [self removeObserver:self forKeyPath:@"isActualSize"];
+  [self removeObserver:self forKeyPath:@"editingShape"];
   [popoverController release];
   [toolbar release];
   [shapes release];
   [rects release];
+  [gestureView release];
   [super dealloc];
 }
 
@@ -447,6 +515,33 @@
     }
     else if ([keyPath isEqualToString:@"isActualSize"]) {
       actualSizeButton.enabled = !isActualSize;
+    }
+    else if ([keyPath isEqualToString:@"editingShape"]) {
+      if (editingShape == nil) {
+        scrollView.scrollEnabled = YES;
+        
+        [gestureView removeFromSuperview];
+      }
+      else {
+        scrollView.scrollEnabled = NO;
+        
+        if (gestureView == nil) {
+          gestureView = [[UIView alloc] initWithFrame:CGRectZero];
+          gestureView.backgroundColor = [UIColor clearColor];
+          
+          UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+          [gestureView addGestureRecognizer:panGesture];
+          [panGesture release];
+          
+          UIPinchGestureRecognizer *pinchGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinch:)];
+          [gestureView addGestureRecognizer:pinchGesture];
+          [pinchGesture release];
+        }
+        
+        NSValue *value = [rects objectAtIndex:[shapes indexOfObject:editingShape]];
+        gestureView.frame = [value CGRectValue];
+        [containerView addSubview:gestureView];
+      }
     }
   }
 }

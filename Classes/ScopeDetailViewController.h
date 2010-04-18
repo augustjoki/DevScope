@@ -27,6 +27,8 @@
   
   BOOL recognizingEdit;
   CAShapeLayer *editingShape;
+  UIView *gestureView;
+  CGRect gestureFrame;
 }
 
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;
