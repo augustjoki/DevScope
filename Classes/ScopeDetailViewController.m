@@ -8,7 +8,6 @@
 
 #import "ScopeDetailViewController.h"
 
-
 @interface ScopeDetailViewController ()
 
 @property (nonatomic, retain) UIPopoverController *popoverController;
@@ -16,11 +15,14 @@
 
 - (void)recenter;
 - (void)aspectFit;
+- (void)aspectFitAnimated:(BOOL)animated;
 - (void)actualSize;
+- (void)actualSizeAnimated:(BOOL)animated;
 - (CGFloat)aspectFitScale;
 - (void)doubleTap:(UIGestureRecognizer *)recognizer;
 - (void)twoFingerTap:(UIGestureRecognizer *)recognizer;
 - (CGRect)zoomRectWithScale:(float)scale withCenter:(CGPoint)center;
+- (void)longPress:(UIGestureRecognizer *)recognizer;
 
 @end
 
@@ -60,7 +62,7 @@
 #pragma mark Scroll View
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
-  return imageView;
+  return containerView;
 }
 
 
@@ -96,9 +98,9 @@
 
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
-  CGRect frame = imageView.frame;
+  CGRect frame = containerView.frame;
   frame.origin = CGPointZero;
-  imageView.frame = frame;
+  containerView.frame = frame;
   if (isAspectFit) {
     [self aspectFit];
   }
@@ -116,15 +118,21 @@
   
   UIImage *exampleImage = [UIImage imageNamed:@"example.png"];
   imageView.image = exampleImage;
-  [imageView sizeToFit];
-  CGRect imageFrame = imageView.frame;
-  imageFrame.origin = CGPointZero;
-  imageView.frame = imageFrame;
   
-  CGSize imageSize = exampleImage.size;
-  scrollView.contentSize = imageSize;
+  CGRect frame = containerView.frame;
+  frame.origin = CGPointZero;
+  frame.size = exampleImage.size;
+  containerView.frame = frame;
+  containerView.layer.shadowOpacity = 0.5f;
+  containerView.layer.shadowRadius = 10.0f;
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, imageView.bounds);
+  containerView.layer.shadowPath = path;
+  CGPathRelease(path);
   
-  [self aspectFit];
+  scrollView.contentSize = exampleImage.size;
+  
+  [self aspectFitAnimated:NO];
   
   UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleTap:)];
   tapGesture.numberOfTapsRequired = 2;
@@ -135,6 +143,13 @@
   tapGesture.numberOfTouchesRequired = 2;
   [scrollView addGestureRecognizer:tapGesture];
   [tapGesture release];
+  
+  shapes = [[NSMutableArray alloc] init];
+  rects = [[NSMutableArray alloc] init];
+  
+  UILongPressGestureRecognizer *longPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPress:)];
+  [containerView addGestureRecognizer:longPressGesture];
+  [longPressGesture release];
 }
 
 
@@ -143,11 +158,25 @@
     [super viewWillAppear:animated];
 }
 */
-/*
+
 - (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated];
+  [super viewDidAppear:animated];
+  
+  CAShapeLayer *shape = [[CAShapeLayer alloc] init];
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, imageView.bounds);
+  shape.path = path;
+  CGPathRelease(path);
+  shape.fillColor = [UIColor colorWithRed:51.0f/255.0f green:52.0f/255.0f blue:255.0f/255.0f alpha:0.5f].CGColor;
+  shape.lineJoin = kCALineJoinBevel;
+  shape.lineWidth = 3.0f;
+  shape.strokeColor = [UIColor colorWithWhite:0.0f alpha:0.5f].CGColor;
+  [containerView.layer addSublayer:shape];
+  [shapes addObject:shape];
+  [shape release];
+  [rects addObject:[NSValue valueWithCGRect:imageView.bounds]];
 }
-*/
+
 /*
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
@@ -160,9 +189,11 @@
 */
 
 - (void)viewDidUnload {
-    // Release any retained subviews of the main view.
-    // e.g. self.myOutlet = nil;
-    self.popoverController = nil;
+  // Release any retained subviews of the main view.
+  // e.g. self.myOutlet = nil;
+  self.popoverController = nil;
+  [shapes release];
+  shapes = nil;
 }
 
 
@@ -186,27 +217,120 @@
   if (scrollView.zoomScale == scrollView.maximumZoomScale) {
     return;
   }
-  CGPoint center = [recognizer locationInView:imageView];
+  CGPoint center = [recognizer locationInView:containerView];
   CGRect zoomRect = [self zoomRectWithScale:scrollView.zoomScale * 2.0f withCenter:center];
   [scrollView zoomToRect:zoomRect animated:YES];
 }
+
 
 - (void)twoFingerTap:(UIGestureRecognizer *)recognizer {
   if (scrollView.zoomScale == scrollView.minimumZoomScale) {
     return;
   }
-  CGPoint center = [recognizer locationInView:imageView];
+  CGPoint center = [recognizer locationInView:containerView];
   CGRect zoomRect = [self zoomRectWithScale:scrollView.zoomScale / 2.0f withCenter:center];
   [scrollView zoomToRect:zoomRect animated:YES];
 }
 
+
+- (void)longPress:(UIGestureRecognizer *)recognizer {
+  if (recognizer.state == UIGestureRecognizerStateChanged ||
+      recognizer.state == UIGestureRecognizerStateCancelled) {
+    recognizingEdit = NO;
+    if (editingShape != nil) {
+      editingShape.lineDashPattern = nil;
+      editingShape = nil;
+    }
+  }
+  else if (recognizer.state == UIGestureRecognizerStateEnded) {
+    if (!recognizingEdit) {
+      return;
+    }
+    recognizingEdit = NO;
+    if (editingShape == nil) {
+      CGPoint point = [recognizer locationInView:containerView];
+      for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
+        CGRect rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
+        if (CGRectContainsPoint(rect, point)) {
+          editingShape = [shapes objectAtIndex:ii];
+          break;
+        }
+      }
+      if (editingShape != nil) {
+        NSArray *pattern = [NSArray arrayWithObjects:[NSNumber numberWithInt:5],
+                            [NSNumber numberWithInt:5],
+                            nil];
+        editingShape.lineDashPattern = pattern;
+      }
+    }
+    else {
+      editingShape.lineDashPattern = nil;
+      editingShape = nil;
+    }
+  }
+  else if (recognizer.state == UIGestureRecognizerStateBegan) {
+    recognizingEdit = YES;
+    CGPoint point = [recognizer locationInView:containerView];
+    CGRect rect;
+    CAShapeLayer *shape = nil;
+    for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
+      rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
+      if (CGRectContainsPoint(rect, point)) {
+        shape = [shapes objectAtIndex:ii];
+        break;
+      }
+    }
+    if (shape != nil) {
+      CAKeyframeAnimation *transform = [CAKeyframeAnimation animationWithKeyPath:@"transform"];
+      transform.values = [NSArray arrayWithObjects:
+                          [NSValue valueWithCATransform3D:CATransform3DIdentity],
+                          [NSValue valueWithCATransform3D:CATransform3DMakeScale(1.01f, 1.01f, 1.0f)],
+                          [NSValue valueWithCATransform3D:CATransform3DMakeScale(0.99f, 0.99f, 1.0f)],
+                          [NSValue valueWithCATransform3D:CATransform3DIdentity],
+                          nil];
+      transform.timingFunctions = [NSArray arrayWithObjects:
+                                   [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
+                                   [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear],
+                                   [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn],
+                                   nil];
+      transform.removedOnCompletion = NO;
+      
+      CAKeyframeAnimation *position = [CAKeyframeAnimation animationWithKeyPath:@"position"];
+      CGRect transformRect;
+      CGPoint point;
+      NSMutableArray *positions = [NSMutableArray array];
+      [positions addObject:[NSValue valueWithCGPoint:CGPointZero]];
+      
+      transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(1.01f, 1.01f));
+      point = CGPointMake((rect.size.width - transformRect.size.width) / 2.0f,
+                          (rect.size.height - transformRect.size.height) / 2.0f);
+      [positions addObject:[NSValue valueWithCGPoint:point]];
+      
+      transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(0.99f, 0.99f));
+      point = CGPointMake((rect.size.width - transformRect.size.width) / 2.0f,
+                          (rect.size.height - transformRect.size.height) / 2.0f);
+      [positions addObject:[NSValue valueWithCGPoint:point]];
+      
+      [positions addObject:[NSValue valueWithCGPoint:CGPointZero]];
+      
+      position.values = positions;
+      position.timingFunctions = transform.timingFunctions;
+      position.removedOnCompletion = NO;
+      
+      CAAnimationGroup *group = [CAAnimationGroup animation];
+      group.animations = [NSArray arrayWithObjects:transform, position, nil];
+      
+      [shape addAnimation:group forKey:nil];
+    }
+  }
+}
 
 #pragma mark -
 #pragma mark Private
 
 
 - (void) recenter {
-  CGSize imageSize = imageView.frame.size;
+  CGSize imageSize = containerView.frame.size;
   UIEdgeInsets imageInsets = (scrollView.zoomScale < 1.0f) ? UIEdgeInsetsMake((scrollView.bounds.size.height - imageSize.height) / 2.0f,
                                                                               (scrollView.bounds.size.width - imageSize.width) / 2.0f,
                                                                               0.0f, 0.0f) : UIEdgeInsetsZero;
@@ -222,8 +346,13 @@
 }
 
 - (void)aspectFit {
+  [self aspectFitAnimated:YES];
+}
+
+
+- (void)aspectFitAnimated:(BOOL)animated {
   CGFloat minScale = [self aspectFitScale];
-  [scrollView setZoomScale:minScale animated:YES];
+  [scrollView setZoomScale:minScale animated:animated];
   
   self.isAspectFit = YES;
   if (minScale != 1.0) {
@@ -247,7 +376,12 @@
 
 
 - (void)actualSize {
-  [scrollView setZoomScale:1.0f animated:YES];
+  [self actualSizeAnimated:YES];
+}
+
+
+- (void)actualSizeAnimated:(BOOL)animated {
+  [scrollView setZoomScale:1.0f animated:animated];
   self.isActualSize = YES;
   
   CGFloat minScale = [self aspectFitScale];
@@ -297,6 +431,8 @@
 - (void)dealloc {
   [popoverController release];
   [toolbar release];
+  [shapes release];
+  [rects release];
   [super dealloc];
 }
 
