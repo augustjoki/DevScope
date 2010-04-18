@@ -8,6 +8,8 @@
 
 #import "ScopeDetailViewController.h"
 
+#import "DSBorderDragGestureRecognizer.h"
+
 @interface ScopeDetailViewController ()
 
 @property (nonatomic, retain) UIPopoverController *popoverController;
@@ -24,6 +26,7 @@
 - (void)twoFingerTap:(UITapGestureRecognizer *)recognizer;
 - (CGRect)zoomRectWithScale:(float)scale withCenter:(CGPoint)center;
 - (void)longPress:(UILongPressGestureRecognizer *)recognizer;
+- (void)border:(DSBorderDragGestureRecognizer *)recognizer;
 - (void)pan:(UIPanGestureRecognizer *)recognizer;
 - (void)pinch:(UIPinchGestureRecognizer *)recognizer;
 
@@ -177,7 +180,6 @@
   shape.path = path;
   CGPathRelease(path);
   shape.fillColor = [UIColor colorWithRed:51.0f/255.0f green:52.0f/255.0f blue:255.0f/255.0f alpha:0.5f].CGColor;
-  shape.lineJoin = kCALineJoinBevel;
   shape.lineWidth = 3.0f;
   shape.strokeColor = [UIColor colorWithWhite:0.0f alpha:0.5f].CGColor;
   [containerView.layer addSublayer:shape];
@@ -243,8 +245,7 @@
 
 
 - (void)longPress:(UILongPressGestureRecognizer *)recognizer {
-  if (recognizer.state == UIGestureRecognizerStateChanged ||
-      recognizer.state == UIGestureRecognizerStateCancelled) {
+  if (recognizer.state == UIGestureRecognizerStateCancelled) {
     recognizingEdit = NO;
     if (editingShape != nil) {
       editingShape.lineDashPattern = nil;
@@ -333,12 +334,69 @@
 }
 
 
+- (void)border:(DSBorderDragGestureRecognizer *)recognizer {
+  DSBorderDragGestureRecognizerLocation location = recognizer.location;
+  
+  CGPoint point = [recognizer locationInView:containerView];
+  CGRect frame = gestureView.frame;
+  switch (location) {
+    case DSBorderDragGestureRecognizerLocationTopLeft:
+      frame.size.width = floorf(frame.size.width - (point.x - frame.origin.x));
+      frame.size.height = floorf(frame.size.height - (point.y - frame.origin.y));
+      frame.origin.x = floorf(point.x);
+      frame.origin.y = floorf(point.y);
+      break;
+    case DSBorderDragGestureRecognizerLocationTop:
+      frame.size.height = floorf(frame.size.height - (point.y - frame.origin.y));
+      frame.origin.y = floorf(point.y);
+      break;
+    case DSBorderDragGestureRecognizerLocationTopRight:
+      frame.size.width = floorf(point.x - frame.origin.x);
+      frame.size.height = floorf(frame.size.height - (point.y - frame.origin.y));
+      frame.origin.y = floorf(point.y);
+      break;
+    case DSBorderDragGestureRecognizerLocationLeft:
+      frame.size.width = floorf(frame.size.width - (point.x - frame.origin.x));
+      frame.origin.x = floorf(point.x);
+      break;
+    case DSBorderDragGestureRecognizerLocationRight:
+      frame.size.width = floorf(point.x - frame.origin.x);
+      break;
+    case DSBorderDragGestureRecognizerLocationBottomLeft:
+      frame.size.width = floorf(frame.size.width - (point.x - frame.origin.x));
+      frame.size.height = floorf(point.y - frame.origin.y);
+      frame.origin.x = floorf(point.x);
+      break;
+    case DSBorderDragGestureRecognizerLocationBottom:
+      frame.size.height = floorf(point.y - frame.origin.y);
+      break;
+    case DSBorderDragGestureRecognizerLocationBottomRight:
+      frame.size.width = floorf(point.x - frame.origin.x);
+      frame.size.height = floorf(point.y - frame.origin.y);
+    default:
+      break;
+  }
+  
+  gestureView.frame = frame;
+  
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, frame);
+  editingShape.path = path;
+  CGPathRelease(path);
+  
+  if (recognizer.state == UIGestureRecognizerStateEnded) {
+    NSValue *value = [NSValue valueWithCGRect:frame];
+    [rects replaceObjectAtIndex:[shapes indexOfObject:editingShape] withObject:value];
+  }
+}
+
+
 - (void)pan:(UIPanGestureRecognizer *)recognizer {
   if (recognizer.state == UIGestureRecognizerStateBegan) {
     gestureFrame = gestureView.frame;
   }
-  CGPoint translation = [recognizer translationInView:containerView];
   
+  CGPoint translation = [recognizer translationInView:containerView];
   CGRect frame = gestureFrame;
   frame.origin.x = floorf(frame.origin.x + translation.x);
   frame.origin.y = floorf(frame.origin.y + translation.y);
@@ -362,7 +420,6 @@
   }
   CGPoint location = [recognizer locationInView:containerView];
   CGFloat scale = recognizer.scale;
-  NSLog(@"%f", scale);
   
   CGRect frame = gestureFrame;
   CGFloat ratioX = (location.x - frame.origin.x) / frame.size.width;
@@ -519,17 +576,30 @@
     else if ([keyPath isEqualToString:@"editingShape"]) {
       if (editingShape == nil) {
         scrollView.scrollEnabled = YES;
+        if (!isAspectFit) {
+          aspectFitButton.enabled = YES;
+        }
+        if (!isActualSize) {
+          actualSizeButton.enabled = YES;
+        }
         
         [gestureView removeFromSuperview];
       }
       else {
         scrollView.scrollEnabled = NO;
+        aspectFitButton.enabled = NO;
+        actualSizeButton.enabled = NO;
         
         if (gestureView == nil) {
           gestureView = [[UIView alloc] initWithFrame:CGRectZero];
           gestureView.backgroundColor = [UIColor clearColor];
           
+          DSBorderDragGestureRecognizer *borderGesture = [[DSBorderDragGestureRecognizer alloc] initWithTarget:self action:@selector(border:)];
+          [gestureView addGestureRecognizer:borderGesture];
+          [borderGesture release];
+          
           UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+          [panGesture requireGestureRecognizerToFail:borderGesture];
           [gestureView addGestureRecognizer:panGesture];
           [panGesture release];
           

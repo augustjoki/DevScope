@@ -18,6 +18,7 @@
 		28AD73600D9D9599002E5188 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 28AD735F0D9D9599002E5188 /* MainWindow.xib */; };
 		97D5AF9F117A6CD10032C106 /* example.png in Resources */ = {isa = PBXBuildFile; fileRef = 97D5AF9E117A6CD10032C106 /* example.png */; };
 		97F40272117AF268009AE748 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97F40271117AF268009AE748 /* QuartzCore.framework */; };
+		97F4043A117B48E0009AE748 /* DSBorderDragGestureRecognizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F40439117B48E0009AE748 /* DSBorderDragGestureRecognizer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,8 @@
 		8D1107310486CEB800E47090 /* DevScope-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "DevScope-Info.plist"; plistStructureDefinitionIdentifier = "com.apple.xcode.plist.structure-definition.iphone.info-plist"; sourceTree = "<group>"; };
 		97D5AF9E117A6CD10032C106 /* example.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = example.png; sourceTree = "<group>"; };
 		97F40271117AF268009AE748 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		97F40438117B48E0009AE748 /* DSBorderDragGestureRecognizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DSBorderDragGestureRecognizer.h; sourceTree = "<group>"; };
+		97F40439117B48E0009AE748 /* DSBorderDragGestureRecognizer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DSBorderDragGestureRecognizer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,8 @@
 		080E96DDFE201D6D7F000001 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				97F40438117B48E0009AE748 /* DSBorderDragGestureRecognizer.h */,
+				97F40439117B48E0009AE748 /* DSBorderDragGestureRecognizer.m */,
 				1D3623240D0F684500981E51 /* DevScopeAppDelegate.h */,
 				1D3623250D0F684500981E51 /* DevScopeAppDelegate.m */,
 				28042007108E984D000629CD /* ScopeListViewController.h */,
@@ -185,6 +190,7 @@
 				1D3623260D0F684500981E51 /* DevScopeAppDelegate.m in Sources */,
 				2804200B108E984D000629CD /* ScopeListViewController.m in Sources */,
 				2804200C108E984D000629CD /* ScopeDetailViewController.m in Sources */,
+				97F4043A117B48E0009AE748 /* DSBorderDragGestureRecognizer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
