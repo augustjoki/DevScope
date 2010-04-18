@@ -58,7 +58,7 @@
 
 // Ensure that the view controller supports rotation and that the split view can therefore show in both portrait and landscape.
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return YES;
+  return YES;
 }
 
 
@@ -67,11 +67,15 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-    
-  imageView.image = [UIImage imageNamed:@"example.png"];
+  
+  UIImage *exampleImage = [UIImage imageNamed:@"example.png"];
+  imageView.image = exampleImage;
   [imageView sizeToFit];
-  scrollView.contentSize = imageView.bounds.size;
-  //scrollView.zoomScale = scrollView.minimumZoomScale;
+  CGRect imageFrame = imageView.frame;
+  imageFrame.origin = CGPointZero;
+  imageView.frame = imageFrame;
+  
+  scrollView.contentSize = exampleImage.size;
 }
 
 
