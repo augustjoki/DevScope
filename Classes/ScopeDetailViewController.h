@@ -14,8 +14,17 @@
   UIToolbar *toolbar;
   IBOutlet UIScrollView *scrollView;
   IBOutlet UIImageView *imageView;
+  IBOutlet UIBarButtonItem *aspectFitButton;
+  IBOutlet UIBarButtonItem *actualSizeButton;
+  
+  BOOL isAspectFit;
+  BOOL isActualSize;
+  BOOL programaticZoom;
 }
 
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;
+
+- (void)aspectFitButtonPressed:(id)sender;
+- (void)actualSizeButtonPressed:(id)sender;
 
 @end
