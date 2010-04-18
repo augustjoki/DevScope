@@ -18,6 +18,7 @@
   IBOutlet UIImageView *imageView;
   IBOutlet UIBarButtonItem *aspectFitButton;
   IBOutlet UIBarButtonItem *actualSizeButton;
+  IBOutlet UIBarButtonItem *addButton;
   
   BOOL isAspectFit;
   BOOL isActualSize;
@@ -27,6 +28,7 @@
   
   BOOL recognizingEdit;
   CAShapeLayer *editingShape;
+  CAShapeLayer *animatingShape;
   UIView *gestureView;
   CGRect gestureFrame;
 }
@@ -35,5 +37,6 @@
 
 - (void)aspectFitButtonPressed:(id)sender;
 - (void)actualSizeButtonPressed:(id)sender;
+- (void)addButtonPressed:(id)sender;
 
 @end

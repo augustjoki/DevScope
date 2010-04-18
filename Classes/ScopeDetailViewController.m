@@ -186,6 +186,8 @@
   [shapes addObject:shape];
   [shape release];
   [rects addObject:[NSValue valueWithCGRect:imageView.bounds]];
+  
+  self.editingShape = shape;
 }
 
 /*
@@ -221,6 +223,32 @@
 }
 
 
+- (void)addButtonPressed:(id)sender {
+  if (editingShape != nil) {
+    self.editingShape = nil;
+  }
+  static CGFloat size = 120.0f;
+  CGRect frame = CGRectMake(floorf((containerView.bounds.size.width - size) / 2.0f),
+                            floorf((containerView.bounds.size.height - size) / 2.0f),
+                            120.0f, 120.0f);
+  
+  CAShapeLayer *shape = [[CAShapeLayer alloc] init];
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddRect(path, NULL, frame);
+  shape.path = path;
+  CGPathRelease(path);
+  shape.fillColor = [UIColor colorWithRed:(arc4random() % 256)/255.0f green:(arc4random() % 256)/255.0f blue:(arc4random() % 256)/255.0f alpha:0.5f].CGColor;
+  shape.lineWidth = 3.0f;
+  shape.strokeColor = [UIColor colorWithWhite:0.0f alpha:0.5f].CGColor;
+  [containerView.layer addSublayer:shape];
+  [shapes addObject:shape];
+  [shape release];
+  [rects addObject:[NSValue valueWithCGRect:frame]];
+  
+  self.editingShape = shape;
+}
+
+
 #pragma mark -
 #pragma mark Gestures
 
@@ -245,10 +273,15 @@
 
 
 - (void)longPress:(UILongPressGestureRecognizer *)recognizer {
+  if (editingShape != nil) {
+    CGPoint editingPoint = [recognizer locationInView:gestureView];
+    if (![gestureView pointInside:editingPoint withEvent:nil]) {
+      return;
+    }
+  }
   if (recognizer.state == UIGestureRecognizerStateCancelled) {
     recognizingEdit = NO;
     if (editingShape != nil) {
-      editingShape.lineDashPattern = nil;
       self.editingShape = nil;
     }
   }
@@ -258,23 +291,9 @@
     }
     recognizingEdit = NO;
     if (editingShape == nil) {
-      CGPoint point = [recognizer locationInView:containerView];
-      for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
-        CGRect rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
-        if (CGRectContainsPoint(rect, point)) {
-          self.editingShape = [shapes objectAtIndex:ii];
-          break;
-        }
-      }
-      if (editingShape != nil) {
-        NSArray *pattern = [NSArray arrayWithObjects:[NSNumber numberWithInt:5],
-                            [NSNumber numberWithInt:5],
-                            nil];
-        editingShape.lineDashPattern = pattern;
-      }
+      self.editingShape = animatingShape;
     }
     else {
-      editingShape.lineDashPattern = nil;
       self.editingShape = nil;
     }
   }
@@ -282,15 +301,19 @@
     recognizingEdit = YES;
     CGPoint point = [recognizer locationInView:containerView];
     CGRect rect;
-    CAShapeLayer *shape = nil;
-    for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
-      rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
-      if (CGRectContainsPoint(rect, point)) {
-        shape = [shapes objectAtIndex:ii];
-        break;
+    if (editingShape == nil) {
+      for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
+        rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
+        if (CGRectContainsPoint(rect, point)) {
+          animatingShape = [shapes objectAtIndex:ii];
+          break;
+        }
       }
     }
-    if (shape != nil) {
+    else {
+      animatingShape = editingShape;
+    }
+    if (animatingShape != nil) {
       CAKeyframeAnimation *transform = [CAKeyframeAnimation animationWithKeyPath:@"transform"];
       transform.values = [NSArray arrayWithObjects:
                           [NSValue valueWithCATransform3D:CATransform3DIdentity],
@@ -307,8 +330,9 @@
       CAKeyframeAnimation *position = [CAKeyframeAnimation animationWithKeyPath:@"position"];
       CGRect transformRect;
       CGPoint point;
+      CGPoint originalPosition = animatingShape.position;
       NSMutableArray *positions = [NSMutableArray array];
-      [positions addObject:[NSValue valueWithCGPoint:CGPointZero]];
+      [positions addObject:[NSValue valueWithCGPoint:originalPosition]];
       
       transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(1.01f, 1.01f));
       point = CGPointMake((rect.size.width - transformRect.size.width) / 2.0f,
@@ -320,15 +344,17 @@
                           (rect.size.height - transformRect.size.height) / 2.0f);
       [positions addObject:[NSValue valueWithCGPoint:point]];
       
-      [positions addObject:[NSValue valueWithCGPoint:CGPointZero]];
+      [positions addObject:[NSValue valueWithCGPoint:originalPosition]];
       
       position.values = positions;
       position.timingFunctions = transform.timingFunctions;
       
       CAAnimationGroup *group = [CAAnimationGroup animation];
-      group.animations = [NSArray arrayWithObjects:transform, position, nil];
+      group.animations = [NSArray arrayWithObjects:transform,
+                          position,
+                          nil];
       
-      [shape addAnimation:group forKey:nil];
+      [animatingShape addAnimation:group forKey:nil];
     }
   }
 }
@@ -543,7 +569,7 @@
   if (self != nil) {
     [self addObserver:self forKeyPath:@"isAspectFit" options:0 context:NULL];
     [self addObserver:self forKeyPath:@"isActualSize" options:0 context:NULL];
-    [self addObserver:self forKeyPath:@"editingShape" options:0 context:NULL];
+    [self addObserver:self forKeyPath:@"editingShape" options:NSKeyValueObservingOptionOld context:NULL];
   }
   return self;
 }
@@ -583,12 +609,21 @@
           actualSizeButton.enabled = YES;
         }
         
+        CAShapeLayer *oldShape = [change objectForKey:NSKeyValueChangeOldKey];
+        oldShape.lineDashPattern = nil;
+        
         [gestureView removeFromSuperview];
       }
       else {
         scrollView.scrollEnabled = NO;
         aspectFitButton.enabled = NO;
         actualSizeButton.enabled = NO;
+        
+        
+        NSArray *pattern = [NSArray arrayWithObjects:[NSNumber numberWithInt:5],
+                            [NSNumber numberWithInt:5],
+                            nil];
+        editingShape.lineDashPattern = pattern;
         
         if (gestureView == nil) {
           gestureView = [[UIView alloc] initWithFrame:CGRectZero];
