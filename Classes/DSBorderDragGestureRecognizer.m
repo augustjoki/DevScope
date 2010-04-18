@@ -30,7 +30,7 @@
   
   UITouch *touch = [touches anyObject];
   CGPoint point = [touch locationInView:self.view];
-  CGFloat buffer = 10.0f;
+  CGFloat buffer = 20.0f;
   short border = 0;
   if (point.x < buffer) {
     border += 1;

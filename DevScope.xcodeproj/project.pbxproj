@@ -19,6 +19,9 @@
 		97D5AF9F117A6CD10032C106 /* example.png in Resources */ = {isa = PBXBuildFile; fileRef = 97D5AF9E117A6CD10032C106 /* example.png */; };
 		97F40272117AF268009AE748 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97F40271117AF268009AE748 /* QuartzCore.framework */; };
 		97F4043A117B48E0009AE748 /* DSBorderDragGestureRecognizer.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F40439117B48E0009AE748 /* DSBorderDragGestureRecognizer.m */; };
+		97F4051E117B8C6E009AE748 /* UIView+NibLoading.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F4051D117B8C6E009AE748 /* UIView+NibLoading.m */; };
+		97F4052B117B8CDF009AE748 /* DSDimView.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F4052A117B8CDF009AE748 /* DSDimView.m */; };
+		97F4052D117B8D06009AE748 /* DSDimView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 97F4052C117B8D06009AE748 /* DSDimView.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +44,11 @@
 		97F40271117AF268009AE748 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		97F40438117B48E0009AE748 /* DSBorderDragGestureRecognizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DSBorderDragGestureRecognizer.h; sourceTree = "<group>"; };
 		97F40439117B48E0009AE748 /* DSBorderDragGestureRecognizer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DSBorderDragGestureRecognizer.m; sourceTree = "<group>"; };
+		97F4051C117B8C6E009AE748 /* UIView+NibLoading.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIView+NibLoading.h"; sourceTree = "<group>"; };
+		97F4051D117B8C6E009AE748 /* UIView+NibLoading.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+NibLoading.m"; sourceTree = "<group>"; };
+		97F40529117B8CDF009AE748 /* DSDimView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DSDimView.h; sourceTree = "<group>"; };
+		97F4052A117B8CDF009AE748 /* DSDimView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DSDimView.m; sourceTree = "<group>"; };
+		97F4052C117B8D06009AE748 /* DSDimView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = DSDimView.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +77,11 @@
 				28042008108E984D000629CD /* ScopeListViewController.m */,
 				28042009108E984D000629CD /* ScopeDetailViewController.h */,
 				2804200A108E984D000629CD /* ScopeDetailViewController.m */,
+				97F4051C117B8C6E009AE748 /* UIView+NibLoading.h */,
+				97F4051D117B8C6E009AE748 /* UIView+NibLoading.m */,
+				97F40529117B8CDF009AE748 /* DSDimView.h */,
+				97F4052A117B8CDF009AE748 /* DSDimView.m */,
+				97F4052C117B8D06009AE748 /* DSDimView.xib */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -176,6 +189,7 @@
 				28AD73600D9D9599002E5188 /* MainWindow.xib in Resources */,
 				2804203C108E9BAB000629CD /* ScopeDetailView.xib in Resources */,
 				97D5AF9F117A6CD10032C106 /* example.png in Resources */,
+				97F4052D117B8D06009AE748 /* DSDimView.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -191,6 +205,8 @@
 				2804200B108E984D000629CD /* ScopeListViewController.m in Sources */,
 				2804200C108E984D000629CD /* ScopeDetailViewController.m in Sources */,
 				97F4043A117B48E0009AE748 /* DSBorderDragGestureRecognizer.m in Sources */,
+				97F4051E117B8C6E009AE748 /* UIView+NibLoading.m in Sources */,
+				97F4052B117B8CDF009AE748 /* DSDimView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

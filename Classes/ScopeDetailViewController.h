@@ -9,6 +9,8 @@
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 
+@class DSDimView;
+
 @interface ScopeDetailViewController : UIViewController <UIPopoverControllerDelegate, UISplitViewControllerDelegate, UIScrollViewDelegate> {
   
   UIPopoverController *popoverController;
@@ -31,9 +33,11 @@
   CAShapeLayer *animatingShape;
   UIView *gestureView;
   CGRect gestureFrame;
+  DSDimView *dimView;
 }
 
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;
+@property (nonatomic, readonly) NSMutableArray *rects;
 
 - (void)aspectFitButtonPressed:(id)sender;
 - (void)actualSizeButtonPressed:(id)sender;

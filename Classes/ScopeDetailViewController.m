@@ -9,12 +9,15 @@
 #import "ScopeDetailViewController.h"
 
 #import "DSBorderDragGestureRecognizer.h"
+#import "UIView+NibLoading.h"
+#import "DSDimView.h"
 
 @interface ScopeDetailViewController ()
 
 @property (nonatomic, retain) UIPopoverController *popoverController;
 @property (nonatomic, assign) BOOL isAspectFit, isActualSize;
 @property (nonatomic, assign) CAShapeLayer *editingShape;
+@property (nonatomic, readonly) DSDimView *dimView;
 
 - (void)recenter;
 - (void)aspectFit;
@@ -29,6 +32,7 @@
 - (void)border:(DSBorderDragGestureRecognizer *)recognizer;
 - (void)pan:(UIPanGestureRecognizer *)recognizer;
 - (void)pinch:(UIPinchGestureRecognizer *)recognizer;
+- (void)tap:(UITapGestureRecognizer *)recognizer;
 
 @end
 
@@ -38,6 +42,7 @@
 
 @synthesize toolbar, popoverController;
 @synthesize isAspectFit, isActualSize, editingShape;
+@synthesize rects;
 
 
 
@@ -162,6 +167,10 @@
   UILongPressGestureRecognizer *longPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPress:)];
   [containerView addGestureRecognizer:longPressGesture];
   [longPressGesture release];
+  
+  tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
+  [containerView addGestureRecognizer:tapGesture];
+  [tapGesture release];
 }
 
 
@@ -317,8 +326,10 @@
       CAKeyframeAnimation *transform = [CAKeyframeAnimation animationWithKeyPath:@"transform"];
       transform.values = [NSArray arrayWithObjects:
                           [NSValue valueWithCATransform3D:CATransform3DIdentity],
-                          [NSValue valueWithCATransform3D:CATransform3DMakeScale(1.01f, 1.01f, 1.0f)],
-                          [NSValue valueWithCATransform3D:CATransform3DMakeScale(0.99f, 0.99f, 1.0f)],
+                          [NSValue valueWithCATransform3D:
+                           CATransform3DMakeScale(1.01f, 1.01f, 1.0f)],
+                          [NSValue valueWithCATransform3D:
+                           CATransform3DMakeScale(0.99f, 0.99f, 1.0f)],
                           [NSValue valueWithCATransform3D:CATransform3DIdentity],
                           nil];
       transform.timingFunctions = [NSArray arrayWithObjects:
@@ -335,13 +346,13 @@
       [positions addObject:[NSValue valueWithCGPoint:originalPosition]];
       
       transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(1.01f, 1.01f));
-      point = CGPointMake((rect.size.width - transformRect.size.width) / 2.0f,
-                          (rect.size.height - transformRect.size.height) / 2.0f);
+      point = CGPointMake(floorf(originalPosition.x + (rect.size.width - transformRect.size.width) / 2.0f),
+                          floorf(originalPosition.y + (rect.size.height - transformRect.size.height) / 2.0f));
       [positions addObject:[NSValue valueWithCGPoint:point]];
       
       transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(0.99f, 0.99f));
-      point = CGPointMake((rect.size.width - transformRect.size.width) / 2.0f,
-                          (rect.size.height - transformRect.size.height) / 2.0f);
+      point = CGPointMake(floorf(originalPosition.x + (rect.size.width - transformRect.size.width) / 2.0f),
+                          floorf(originalPosition.y + (rect.size.height - transformRect.size.height) / 2.0f));
       [positions addObject:[NSValue valueWithCGPoint:point]];
       
       [positions addObject:[NSValue valueWithCGPoint:originalPosition]];
@@ -351,10 +362,57 @@
       
       CAAnimationGroup *group = [CAAnimationGroup animation];
       group.animations = [NSArray arrayWithObjects:transform,
-                          position,
+                          //position,
                           nil];
       
       [animatingShape addAnimation:group forKey:nil];
+      
+      /*
+      CAKeyframeAnimation *pathAnimation = [CAKeyframeAnimation animationWithKeyPath:@"path"];
+      pathAnimation.timingFunctions = [NSArray arrayWithObjects:
+                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
+                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear],
+                                       [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseIn],
+                                       nil];
+      
+      CFMutableArrayRef array = CFArrayCreateMutable(NULL, 4, NULL);
+      
+      CFArrayAppendValue(array, animatingShape.path);
+      
+      CGRect rect = [(NSValue *)[rects objectAtIndex:[shapes indexOfObject:animatingShape]] CGRectValue];
+      CGRect transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(1.01f, 1.01f));
+      transformRect.origin.x += floorf((rect.size.width - transformRect.size.width) / 2.0f);
+      transformRect.origin.y += floorf((rect.size.height - transformRect.size.height) / 2.0f);
+      CGMutablePathRef path = CGPathCreateMutable();
+      CGPathAddRect(path, NULL, transformRect);
+      CFArrayAppendValue(array, path);
+      CGPathRelease(path);
+      
+      transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(0.99f, 0.99f));
+      transformRect.origin.x += floorf((rect.size.width - transformRect.size.width) / 2.0f);
+      transformRect.origin.y += floorf((rect.size.height - transformRect.size.height) / 2.0f);
+      path = CGPathCreateMutable();
+      CGPathAddRect(path, NULL, transformRect);
+      CFArrayAppendValue(array, path);
+      CGPathRelease(path);
+      
+      CFArrayAppendValue(array, animatingShape.path);
+      
+      pathAnimation.values = (NSArray *)array;
+      CFRelease(array);
+      
+      [animatingShape addAnimation:pathAnimation forKey:nil];
+      */
+      /*
+      CGRect rect = [(NSValue *)[rects objectAtIndex:[shapes indexOfObject:animatingShape]] CGRectValue];
+      CGRect transformRect = CGRectApplyAffineTransform(rect, CGAffineTransformMakeScale(1.01f, 1.01f));
+      transformRect.origin.x += floorf((rect.size.width - transformRect.size.width) / 2.0f);
+      transformRect.origin.y += floorf((rect.size.height - transformRect.size.height) / 2.0f);
+      CGMutablePathRef path = CGPathCreateMutable();
+      CGPathAddRect(path, NULL, transformRect);
+      animatingShape.path = path;
+      CGPathRelease(path);
+      */
     }
   }
 }
@@ -471,6 +529,29 @@
 }
 
 
+- (void)tap:(UITapGestureRecognizer *)recognizer {
+  CGPoint point = [recognizer locationInView:containerView];
+  CGRect rect;
+  CAShapeLayer *shape = nil;
+  for (NSInteger ii = rects.count - 1; ii >= 0; ii--) {
+    rect = [(NSValue *)[rects objectAtIndex:ii] CGRectValue];
+    if (CGRectContainsPoint(rect, point)) {
+      shape = [shapes objectAtIndex:ii];
+      break;
+    }
+  }
+  [dimView removeFromSuperview];
+  if (shape != nil) {
+    DSDimView *dim = self.dimView;
+    dim.originLabel.text = [NSString stringWithFormat:@"x: %.3f y: %.3f", rect.origin.x, rect.origin.y];
+    dim.sizeLabel.text = [NSString stringWithFormat:@"w: %.3f h: %.3f", rect.size.width, rect.size.height];
+    
+    dim.center = point;
+    [containerView addSubview:dim];
+  }
+}
+
+
 #pragma mark -
 #pragma mark Private
 
@@ -561,6 +642,14 @@
 }
 
 
+- (DSDimView *)dimView {
+  if (dimView == nil) {
+    dimView = [[DSDimView loadFromNib] retain];
+  }
+  return dimView;
+}
+
+
 #pragma mark -
 #pragma mark Memory management
 
@@ -584,6 +673,7 @@
   [shapes release];
   [rects release];
   [gestureView release];
+  [dimView release];
   [super dealloc];
 }
 
