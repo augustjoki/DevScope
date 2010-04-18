@@ -19,7 +19,6 @@
   
   BOOL isAspectFit;
   BOOL isActualSize;
-  BOOL programaticZoom;
 }
 
 @property (nonatomic, retain) IBOutlet UIToolbar *toolbar;

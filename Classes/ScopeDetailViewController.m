@@ -18,7 +18,8 @@
 - (void)aspectFit;
 - (void)actualSize;
 - (CGFloat)aspectFitScale;
-- (void)programaticZoomDidStop:(NSString *)animationId finished:(NSNumber *)finished context:(void *)context;
+- (void)doubleTap;
+- (void)twoFingerTap;
 
 @end
 
@@ -63,9 +64,7 @@
 
 
 - (void)scrollViewDidZoom:(UIScrollView *)inScrollView {
-  if (!programaticZoom) {
-    [self recenter];
-  }
+  [self recenter];
 }
 
 
@@ -125,6 +124,16 @@
   scrollView.contentSize = imageSize;
   
   [self aspectFit];
+  
+  UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleTap)];
+  tapGesture.numberOfTapsRequired = 2;
+  [scrollView addGestureRecognizer:tapGesture];
+  [tapGesture release];
+  
+  tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(twoFingerTap)];
+  tapGesture.numberOfTouchesRequired = 2;
+  [scrollView addGestureRecognizer:tapGesture];
+  [tapGesture release];
 }
 
 
@@ -160,29 +169,24 @@
 #pragma mark IBAction
 
 - (void)aspectFitButtonPressed:(id)sender {
-  programaticZoom = YES;
-  [UIView beginAnimations:nil context:NULL];
-  [UIView setAnimationDelegate:self];
-  [UIView setAnimationDidStopSelector:@selector(programaticZoomDidStop:finished:context:)];
   [self aspectFit];
-  [self recenter];
-  [UIView commitAnimations];
 }
 
 
 - (void)actualSizeButtonPressed:(id)sender {
-  programaticZoom = YES;
-  [UIView beginAnimations:nil context:NULL];
-  [UIView setAnimationDelegate:self];
-  [UIView setAnimationDidStopSelector:@selector(programaticZoomDidStop:finished:context:)];
   [self actualSize];
-  [self recenter];
-  [UIView commitAnimations];
 }
 
 
-- (void)programaticZoomDidStop:(NSString *)animationId finished:(NSNumber *)finished context:(void *)context {
-  programaticZoom = NO;
+#pragma mark -
+#pragma mark Gestures
+
+- (void)doubleTap {
+  [scrollView setZoomScale:scrollView.zoomScale * 2.0f animated:YES];
+}
+
+- (void)twoFingerTap {
+  [scrollView setZoomScale:scrollView.zoomScale / 2.0f animated:YES];
 }
 
 
@@ -208,7 +212,7 @@
 
 - (void)aspectFit {
   CGFloat minScale = [self aspectFitScale];
-  scrollView.zoomScale = minScale;
+  [scrollView setZoomScale:minScale animated:YES];
   
   self.isAspectFit = YES;
   if (minScale != 1.0) {
@@ -232,7 +236,7 @@
 
 
 - (void)actualSize {
-  scrollView.zoomScale = 1.0;
+  [scrollView setZoomScale:1.0f animated:YES];
   self.isActualSize = YES;
   
   CGFloat minScale = [self aspectFitScale];
