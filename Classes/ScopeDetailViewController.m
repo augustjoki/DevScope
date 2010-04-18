@@ -18,8 +18,9 @@
 - (void)aspectFit;
 - (void)actualSize;
 - (CGFloat)aspectFitScale;
-- (void)doubleTap;
-- (void)twoFingerTap;
+- (void)doubleTap:(UIGestureRecognizer *)recognizer;
+- (void)twoFingerTap:(UIGestureRecognizer *)recognizer;
+- (CGRect)zoomRectWithScale:(float)scale withCenter:(CGPoint)center;
 
 @end
 
@@ -125,12 +126,12 @@
   
   [self aspectFit];
   
-  UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleTap)];
+  UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleTap:)];
   tapGesture.numberOfTapsRequired = 2;
   [scrollView addGestureRecognizer:tapGesture];
   [tapGesture release];
   
-  tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(twoFingerTap)];
+  tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(twoFingerTap:)];
   tapGesture.numberOfTouchesRequired = 2;
   [scrollView addGestureRecognizer:tapGesture];
   [tapGesture release];
@@ -181,12 +182,22 @@
 #pragma mark -
 #pragma mark Gestures
 
-- (void)doubleTap {
-  [scrollView setZoomScale:scrollView.zoomScale * 2.0f animated:YES];
+- (void)doubleTap:(UIGestureRecognizer *)recognizer {
+  if (scrollView.zoomScale == scrollView.maximumZoomScale) {
+    return;
+  }
+  CGPoint center = [recognizer locationInView:imageView];
+  CGRect zoomRect = [self zoomRectWithScale:scrollView.zoomScale * 2.0f withCenter:center];
+  [scrollView zoomToRect:zoomRect animated:YES];
 }
 
-- (void)twoFingerTap {
-  [scrollView setZoomScale:scrollView.zoomScale / 2.0f animated:YES];
+- (void)twoFingerTap:(UIGestureRecognizer *)recognizer {
+  if (scrollView.zoomScale == scrollView.minimumZoomScale) {
+    return;
+  }
+  CGPoint center = [recognizer locationInView:imageView];
+  CGRect zoomRect = [self zoomRectWithScale:scrollView.zoomScale / 2.0f withCenter:center];
+  [scrollView zoomToRect:zoomRect animated:YES];
 }
 
 
@@ -247,6 +258,26 @@
   else {
     self.isAspectFit = NO;
   }
+}
+
+
+- (CGRect)zoomRectWithScale:(float)scale withCenter:(CGPoint)center {
+  
+  CGRect zoomRect;
+  
+  // The zoom rect is in the content view's coordinates.
+  // At a zoom scale of 1.0, it would be the size of the
+  // imageScrollView's bounds.
+  // As the zoom scale decreases, so more content is visible,
+  // the size of the rect grows.
+  zoomRect.size.height = scrollView.frame.size.height / scale;
+  zoomRect.size.width  = scrollView.frame.size.width  / scale;
+  
+  // choose an origin so as to get the right center.
+  zoomRect.origin.x = center.x - (zoomRect.size.width  / 2.0);
+  zoomRect.origin.y = center.y - (zoomRect.size.height / 2.0);
+  
+  return zoomRect;
 }
 
 
